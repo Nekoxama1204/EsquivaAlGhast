@@ -119,6 +119,15 @@ function Ball(x, y, angle, level) {
             this.dy *= -1;
         }
     };
+
+    this.isOutOfCanvas = function() {
+        return (
+            this.x + this.radius < 0 ||
+            this.x - this.radius > canvas.width ||
+            this.y + this.radius < 0 ||
+            this.y - this.radius > canvas.height
+        );
+    };
 }
 
 player = {
@@ -158,10 +167,6 @@ function activateNextSquare() {
         setTimeout(activateNextSquare, delay);
     } else {
         allSquaresActivated = true;
-        setTimeout(() => {
-            balls = []; // Limpiar las bolas para el siguiente nivel
-            nextLevel();
-        }, 2000); // Espera 2 segundos antes de pasar al siguiente nivel
     }
 }
 
@@ -180,18 +185,22 @@ function endGame() {
 }
 
 function updateScore() {
-    score += level * 50;
-    document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
+    if (!gameOver) {
+        score += level * 50;
+        document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
+    }
 }
 
 function nextLevel() {
-    level++;
-    squares = [];
-    balls = [];
-    activeSquareIndex = 0;
-    allSquaresActivated = false;
-    initializeLevel();
-    updateScore();
+    if (!gameOver) {
+        level++;
+        squares = [];
+        balls = [];
+        activeSquareIndex = 0;
+        allSquaresActivated = false;
+        initializeLevel();
+        updateScore();
+    }
 }
 
 function gameLoop() {
@@ -201,15 +210,21 @@ function gameLoop() {
     ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
     squares.forEach(square => square.draw());
-    balls.forEach(ball => {
+    balls.forEach((ball, index) => {
         ball.update();
         ball.draw();
+
+        // Eliminar bolas que salen del canvas
+        if (ball.isOutOfCanvas()) {
+            balls.splice(index, 1);
+        }
     });
 
     player.draw();
 
     checkCollisions();
 
+    // Pasar al siguiente nivel si todas las bolas han desaparecido y todos los cuadros han sido activados
     if (allSquaresActivated && balls.length === 0) {
         nextLevel();
     }
@@ -239,4 +254,4 @@ function displayHighScores() {
 
 window.onload = () => {
     displayHighScores();
-};  
+};
