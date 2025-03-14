@@ -192,15 +192,13 @@ function updateScore() {
 }
 
 function nextLevel() {
-    if (!gameOver) {
-        level++;
-        squares = [];
-        balls = [];
-        activeSquareIndex = 0;
-        allSquaresActivated = false;
-        initializeLevel();
-        updateScore();
-    }
+    level++;
+    squares = [];
+    balls = [];
+    activeSquareIndex = 0;
+    allSquaresActivated = false;
+    initializeLevel();
+    updateScore();
 }
 
 function gameLoop() {
@@ -210,21 +208,15 @@ function gameLoop() {
     ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
     squares.forEach(square => square.draw());
-    balls.forEach((ball, index) => {
+    balls.forEach(ball => {
         ball.update();
         ball.draw();
-
-        // Eliminar bolas que salen del canvas
-        if (ball.isOutOfCanvas()) {
-            balls.splice(index, 1);
-        }
     });
 
     player.draw();
 
     checkCollisions();
 
-    // Pasar al siguiente nivel si todas las bolas han desaparecido y todos los cuadros han sido activados
     if (allSquaresActivated && balls.length === 0) {
         nextLevel();
     }
