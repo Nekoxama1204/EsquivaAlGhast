@@ -119,15 +119,6 @@ function Ball(x, y, angle, level) {
             this.dy *= -1;
         }
     };
-
-    this.isOutOfCanvas = function() {
-        return (
-            this.x + this.radius < 0 ||
-            this.x - this.radius > canvas.width ||
-            this.y + this.radius < 0 ||
-            this.y - this.radius > canvas.height
-        );
-    };
 }
 
 player = {
@@ -167,6 +158,10 @@ function activateNextSquare() {
         setTimeout(activateNextSquare, delay);
     } else {
         allSquaresActivated = true;
+        setTimeout(() => {
+            balls = []; // Limpiar las bolas para el siguiente nivel
+            nextLevel();
+        }, 2000); // Espera 2 segundos antes de pasar al siguiente nivel
     }
 }
 
@@ -185,10 +180,8 @@ function endGame() {
 }
 
 function updateScore() {
-    if (!gameOver) {
-        score += level * 50;
-        document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
-    }
+    score += level * 50;
+    document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
 }
 
 function nextLevel() {
