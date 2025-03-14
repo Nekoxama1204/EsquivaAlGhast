@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esquiva al Ghast</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="text-center">
+        <div class="header-content">
+            <img src="assets/logo.jpg" alt="Logo del juego" class="logo">
+            <h1>Esquiva al Ghast</h1>
+        </div>
+    </header>
+
+    <main>
+        <div id="rules" class="rules-container">
+            <h2>Reglas del Juego</h2>
+            <ol>
+                <li>Mueve a tu personaje con el mouse</li>
+                <li>Esquiva las bolas que saldrán de los Ghast</li>
+                <li>No mueras</li>
+            </ol>
+            <button id="startButton" class="btn btn-primary">Comenzar Juego</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="scoreDisplay" class="score-display">Puntos: 0</div>
+
+        <div id="gameOver" class="game-over">
+            <h2>Game Over</h2>
+            <input type="text" id="playerName" placeholder="Introduce tu nombre">
+            <button id="saveScore" class="btn btn-secondary">Guardar Puntuación</button>
+            <button id="playAgain" class="btn btn-primary">Jugar de Nuevo</button>
+            <div id="highScores"></div>
+        </div>
+    </main>
+
+    <footer class="text-center">
+        <p>Créditos: Gael Quiroz Bautista</p>
+    </footer>
+
+    <script src="game.js"></script>
+</body>
+</html>
