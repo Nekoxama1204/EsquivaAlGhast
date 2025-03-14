@@ -34,6 +34,7 @@ function startGame() {
 }
 
 function resetGame() {
+    // Reiniciar todas las variables del juego
     squares = [];
     balls = [];
     level = 1;
@@ -41,9 +42,18 @@ function resetGame() {
     gameOver = false;
     activeSquareIndex = 0;
     allSquaresActivated = false;
+
+    // Limpiar el canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Reiniciar la pantalla de Game Over
     document.getElementById('gameOver').style.display = 'none';
     document.getElementById('scoreDisplay').innerText = 'Puntos: 0';
+
+    // Inicializar el nivel
     initializeLevel();
+
+    // Comenzar el bucle del juego
     gameLoop();
 }
 
@@ -229,4 +239,4 @@ function displayHighScores() {
 
 window.onload = () => {
     displayHighScores();
-};
+};  
