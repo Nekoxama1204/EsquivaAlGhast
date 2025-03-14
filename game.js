@@ -34,6 +34,7 @@ function startGame() {
 }
 
 function resetGame() {
+    // Reiniciar todas las variables del juego
     squares = [];
     balls = [];
     level = 1;
@@ -42,12 +43,17 @@ function resetGame() {
     activeSquareIndex = 0;
     allSquaresActivated = false;
 
+    // Limpiar el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Reiniciar la pantalla de Game Over
     document.getElementById('gameOver').style.display = 'none';
     document.getElementById('scoreDisplay').innerText = 'Puntos: 0';
 
+    // Inicializar el nivel
     initializeLevel();
+
+    // Comenzar el bucle del juego
     gameLoop();
 }
 
@@ -55,8 +61,6 @@ function initializeLevel() {
     for (let i = 0; i < level * 2; i++) {
         squares.push(new Square());
     }
-    activeSquareIndex = 0;
-    allSquaresActivated = false;
     activateNextSquare();
 }
 
@@ -75,11 +79,12 @@ function Square() {
         this.active = true;
         this.image = GE2;
         this.size = 50;
-        
+
+        // Disparar hacia el centro con un margen de aleatoriedad
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
         const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
-        const angleVariation = (Math.random() - 0.5) * 0.5;
+        const angleVariation = (Math.random() - 0.5) * 0.5; // Pequeña variación aleatoria
         const angle = angleToCenter + angleVariation;
 
         balls.push(new Ball(this.x + this.size / 2, this.y + this.size / 2, angle, level));
@@ -89,11 +94,11 @@ function Square() {
 function Ball(x, y, angle, level) {
     this.x = x;
     this.y = y;
-    this.radius = 10 + level * 2;
-    this.speed = 5 + level * 0.5;
+    this.radius = 10 + level * 2; // Bolas más grandes en niveles más altos
+    this.speed = 5 + level * 0.5; // Más velocidad en niveles más altos
     this.dx = Math.cos(angle) * this.speed;
     this.dy = Math.sin(angle) * this.speed;
-    this.opacity = Math.random() * 0.5 + 0.5;
+    this.opacity = Math.random() * 0.5 + 0.5; // Opacidad entre 50% y 100%
 
     this.draw = function() {
         ctx.save();
@@ -106,6 +111,7 @@ function Ball(x, y, angle, level) {
         this.x += this.dx;
         this.y += this.dy;
 
+        // Rebote en los bordes
         if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
             this.dx *= -1;
         }
@@ -113,12 +119,21 @@ function Ball(x, y, angle, level) {
             this.dy *= -1;
         }
     };
+
+    this.isOutOfCanvas = function() {
+        return (
+            this.x + this.radius < 0 ||
+            this.x - this.radius > canvas.width ||
+            this.y + this.radius < 0 ||
+            this.y - this.radius > canvas.height
+        );
+    };
 }
 
 player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    size: 40,
+    size: 40 - level * 2, // Jugador más pequeño en niveles más altos
     image: playerImg,
 
     draw: function() {
@@ -140,16 +155,23 @@ canvas.addEventListener('mousemove', (event) => {
 
 function activateNextSquare() {
     if (activeSquareIndex < squares.length) {
-        squares[activeSquareIndex].activate();
-        activeSquareIndex++;
-        setTimeout(activateNextSquare, Math.max(500, 1000 - level * 50));
+        // Activar varios cuadros al mismo tiempo en niveles más altos
+        const simultaneousSquares = Math.min(1 + Math.floor(level / 3), squares.length - activeSquareIndex);
+        for (let i = 0; i < simultaneousSquares; i++) {
+            squares[activeSquareIndex + i].activate();
+        }
+        activeSquareIndex += simultaneousSquares;
+
+        // Tiempo entre disparos más corto en niveles más altos
+        const delay = Math.max(500, 1000 - level * 50); // Mínimo 500ms
+        setTimeout(activateNextSquare, delay);
     } else {
         allSquaresActivated = true;
     }
 }
 
 function checkCollisions() {
-    balls.forEach(ball => {
+    balls.forEach((ball, index) => {
         if (Math.hypot(ball.x - player.x, ball.y - player.y) < ball.radius + player.size / 2) {
             gameOver = true;
             endGame();
@@ -162,19 +184,23 @@ function endGame() {
     document.getElementById('gameOver').style.display = 'block';
 }
 
-function nextLevel() {
-    if (!gameOver && allSquaresActivated && balls.length === 0) {
-        level++;
-        squares = [];
-        balls = [];
-        initializeLevel();
-        updateScore();
+function updateScore() {
+    if (!gameOver) {
+        score += level * 50;
+        document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
     }
 }
 
-function updateScore() {
-    score += level * 50;
-    document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
+function nextLevel() {
+    if (!gameOver) {
+        level++;
+        squares = [];
+        balls = [];
+        activeSquareIndex = 0;
+        allSquaresActivated = false;
+        initializeLevel();
+        updateScore();
+    }
 }
 
 function gameLoop() {
@@ -184,14 +210,48 @@ function gameLoop() {
     ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
     squares.forEach(square => square.draw());
-    balls.forEach(ball => {
+    balls.forEach((ball, index) => {
         ball.update();
         ball.draw();
+
+        // Eliminar bolas que salen del canvas
+        if (ball.isOutOfCanvas()) {
+            balls.splice(index, 1);
+        }
     });
+
     player.draw();
+
     checkCollisions();
-    nextLevel();
+
+    // Pasar al siguiente nivel si todas las bolas han desaparecido y todos los cuadros han sido activados
+    if (allSquaresActivated && balls.length === 0) {
+        nextLevel();
+    }
+
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-window.onload = displayHighScores;
+function saveScore() {
+    const playerName = document.getElementById('playerName').value;
+    if (playerName) {
+        let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+        highScores.push({ name: playerName, score: score });
+        highScores.sort((a, b) => b.score - a.score);
+        localStorage.setItem('highScores', JSON.stringify(highScores));
+        displayHighScores();
+    }
+}
+
+function displayHighScores() {
+    const highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+    const highScoresList = document.getElementById('highScores');
+    highScoresList.innerHTML = '<h3>Mejores Puntuaciones</h3>';
+    highScores.forEach((entry, index) => {
+        highScoresList.innerHTML += `<p>${index + 1}. ${entry.name}: ${entry.score}</p>`;
+    });
+}
+
+window.onload = () => {
+    displayHighScores();
+};
