@@ -254,4 +254,6 @@ function displayHighScores() {
 
 window.onload = () => {
     displayHighScores();
+
+    // pa que me deje actualizar jaja
 };
