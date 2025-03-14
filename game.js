@@ -198,6 +198,7 @@ function nextLevel() {
         balls = [];
         activeSquareIndex = 0;
         allSquaresActivated = false;
+        
         initializeLevel();
         updateScore();
     }
@@ -221,16 +222,19 @@ function gameLoop() {
     });
 
     player.draw();
-
     checkCollisions();
 
+    // Verificar si todos los cuadros han sido activados
+    allSquaresActivated = squares.every(square => square.active);
+    
     // Pasar al siguiente nivel si todas las bolas han desaparecido y todos los cuadros han sido activados
     if (allSquaresActivated && balls.length === 0) {
-        nextLevel();
+        setTimeout(nextLevel, 1000); // Pequeña pausa antes de avanzar de nivel
     }
 
     animationFrameId = requestAnimationFrame(gameLoop);
 }
+
 
 function saveScore() {
     const playerName = document.getElementById('playerName').value;
