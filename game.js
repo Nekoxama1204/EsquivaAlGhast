@@ -1,232 +1,218 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight - 120;
+const startButton = document.getElementById('startButton');
+const rulesDiv = document.getElementById('rules');
+const scoreDisplay = document.getElementById('score');
+const gameOverDiv = document.getElementById('gameOver');
+const highScoresDiv = document.getElementById('highScores');
+const scoreList = document.getElementById('scoreList');
+const playAgainButton = document.getElementById('playAgain');
+const saveScoreButton = document.getElementById('saveScore');
+const playerNameInput = document.getElementById('playerName');
 
-let squares = [];
-let balls = [];
-let player;
-let level = 1;
-let score = 0;
-let gameOver = false;
-let animationFrameId;
-let activeSquareIndex = 0;
-let allSquaresActivated = false;
+let player, squares, balls, score, level, isGameOver, squareSize, squaresFired, canShoot;
 
 const GE1 = new Image();
 GE1.src = 'assets/GE1.jpg';
 const GE2 = new Image();
 GE2.src = 'assets/GE2.jpg';
-const playerImg = new Image();
-playerImg.src = 'assets/jugador.jpg';
-const ballImg = new Image();
-ballImg.src = 'assets/bola.png';
-const backgroundImg = new Image();
-backgroundImg.src = 'assets/fondo.jpg';
+const jugadorImg = new Image();
+jugadorImg.src = 'assets/jugador.jpg';
+const bolaImg = new Image();
+bolaImg.src = 'assets/bola.png';
 
-document.getElementById('startButton').addEventListener('click', startGame);
-document.getElementById('playAgain').addEventListener('click', resetGame);
-document.getElementById('saveScore').addEventListener('click', saveScore);
-
-function startGame() {
-    document.getElementById('rules').style.display = 'none';
-    resetGame();
-}
-
-function resetGame() {
+function init() {
+    player = { x: canvas.width / 2, y: canvas.height / 2, size: 50 };
     squares = [];
     balls = [];
-    level = 1;
     score = 0;
-    gameOver = false;
-    activeSquareIndex = 0;
-    allSquaresActivated = false;
-    document.getElementById('gameOver').style.display = 'none';
-    document.getElementById('scoreDisplay').innerText = 'Puntos: 0';
-    initializeLevel();
-    gameLoop();
+    level = 1;
+    isGameOver = false;
+    squareSize =  20;
+    squaresFired = 0;
+    canShoot = false;
+
+    generateSquares();
+    updateScoreDisplay();
+    gameOverDiv.classList.add('hidden');
+    highScoresDiv.classList.add('hidden');
+    rulesDiv.classList.remove('hidden');
 }
 
-function initializeLevel() {
+function generateSquares() {
+    squares = [];
     for (let i = 0; i < level * 2; i++) {
-        squares.push(new Square());
+        squares.push({
+            x: Math.random() * (canvas.width - squareSize),
+            y: Math.random() * (canvas.height - squareSize),
+            size: squareSize,
+            hasFired: false,
+            showGE2: false // Estado de animación
+        });
     }
-    activateNextSquare();
+
+    setTimeout(() => {
+        canShoot = true;
+    }, 1000);
 }
 
-function Square() {
-    this.x = Math.random() * canvas.width;
-    this.y = Math.random() * canvas.height;
-    this.size = 30;
-    this.image = GE1;
-    this.active = false;
-
-    this.draw = function() {
-        ctx.drawImage(this.image, this.x, this.y, this.size, this.size);
-    };
-
-    this.activate = function() {
-        this.active = true;
-        this.image = GE2;
-        this.size = 50;
-
-        // Disparar hacia el centro con un margen de aleatoriedad
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
-        const angleVariation = (Math.random() - 0.5) * 0.5; // Pequeña variación aleatoria
-        const angle = angleToCenter + angleVariation;
-
-        balls.push(new Ball(this.x + this.size / 2, this.y + this.size / 2, angle, level));
-    };
+function updateScoreDisplay() {
+    scoreDisplay.textContent = score;
 }
 
-function Ball(x, y, angle, level) {
-    this.x = x;
-    this.y = y;
-    this.radius = 10 + level * 2; // Bolas más grandes en niveles más altos
-    this.speed = 5 + level * 0.5; // Más velocidad en niveles más altos
-    this.dx = Math.cos(angle) * this.speed;
-    this.dy = Math.sin(angle) * this.speed;
-    this.opacity = Math.random() * 0.5 + 0.5; // Opacidad entre 50% y 100%
+function drawPlayer() {
+    ctx.drawImage(jugadorImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
+}
 
-    this.draw = function() {
-        ctx.save();
-        ctx.globalAlpha = this.opacity;
-        ctx.drawImage(ballImg, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
-        ctx.restore();
-    };
+function drawSquares() {
+    squares.forEach(square => {
+        const image = square.showGE2 ? GE2 : GE1;
+        ctx.drawImage(image, square.x, square.y, square.size, square.size);
+    });
+}
 
-    this.update = function() {
-        this.x += this.dx;
-        this.y += this.dy;
+function drawBalls() {
+    balls.forEach(ball => {
+        ctx.drawImage(bolaImg, ball.x - ball.size / 2, ball.y - ball.size / 2, ball.size, ball.size);
+    });
+}
 
-        // Rebote en los bordes
-        if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
-            this.dx *= -1;
+function moveBalls() {
+    balls.forEach(ball => {
+        ball.x += Math.cos(ball.direction) * ball.speed;
+        ball.y += Math.sin(ball.direction) * ball.speed;
+
+        if (ball.x - ball.size / 2 < 0 || ball.x + ball.size / 2 > canvas.width) {
+            ball.direction = Math.PI - ball.direction;
         }
-        if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
-            this.dy *= -1;
-        }
-    };
-}
-
-player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    size: 40 - level * 2, // Jugador más pequeño en niveles más altos
-    image: playerImg,
-
-    draw: function() {
-        ctx.drawImage(this.image, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
-    },
-
-    update: function(event) {
-        const rect = canvas.getBoundingClientRect();
-        this.x = event.clientX - rect.left;
-        this.y = event.clientY - rect.top;
-    }
-};
-
-canvas.addEventListener('mousemove', (event) => {
-    if (!gameOver) {
-        player.update(event);
-    }
-});
-
-function activateNextSquare() {
-    if (activeSquareIndex < squares.length) {
-        // Activar varios cuadros al mismo tiempo en niveles más altos
-        const simultaneousSquares = Math.min(1 + Math.floor(level / 3), squares.length - activeSquareIndex);
-        for (let i = 0; i < simultaneousSquares; i++) {
-            squares[activeSquareIndex + i].activate();
-        }
-        activeSquareIndex += simultaneousSquares;
-
-        // Tiempo entre disparos más corto en niveles más altos
-        const delay = Math.max(500, 1000 - level * 50); // Mínimo 500ms
-        setTimeout(activateNextSquare, delay);
-    } else {
-        allSquaresActivated = true;
-        setTimeout(() => {
-            balls = []; // Limpiar las bolas para el siguiente nivel
-            nextLevel();
-        }, 2000); // Espera 2 segundos antes de pasar al siguiente nivel
-    }
-}
-
-function checkCollisions() {
-    balls.forEach((ball, index) => {
-        if (Math.hypot(ball.x - player.x, ball.y - player.y) < ball.radius + player.size / 2) {
-            gameOver = true;
-            endGame();
+        if (ball.y - ball.size / 2 < 0 || ball.y + ball.size / 2 > canvas.height) {
+            ball.direction = -ball.direction;
         }
     });
 }
 
-function endGame() {
-    cancelAnimationFrame(animationFrameId);
-    document.getElementById('gameOver').style.display = 'block';
+function checkCollisions() {
+    balls.forEach(ball => {
+        if (Math.sqrt((ball.x - player.x) ** 2 + (ball.y - player.y) ** 2) < (ball.size / 2 + player.size / 2)) {
+            gameOver();
+        }
+    });
 }
 
-function updateScore() {
-    score += level * 50;
-    document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
+function gameOver() {
+    isGameOver = true;
+    gameOverDiv.classList.remove('hidden');
 }
 
 function nextLevel() {
     level++;
-    squares = [];
+    score += level * 50;
+    updateScoreDisplay();
     balls = [];
-    activeSquareIndex = 0;
-    allSquaresActivated = false;
-    initializeLevel();
-    updateScore();
+    squaresFired = 0;
+    canShoot = false;
+    squareSize =  (level * 1.9) + squareSize;
+
+    generateSquares();
+    setTimeout(() => {
+        canShoot = true;
+    }, 1000);
 }
 
-function gameLoop() {
-    if (gameOver) return;
+function activateSquare() {
+    if (!canShoot) return;
+
+    for (let i = 0; i < squares.length; i++) {
+        let square = squares[i];
+
+        if (!square.hasFired) {
+            square.hasFired = true;
+            square.showGE2 = true;
+            squaresFired++;
+
+            const ball = {
+                x: square.x + square.size / 2,
+                y: square.y + square.size / 2,
+                size: squareSize/2,
+                speed: 5,
+                direction: Math.random() * Math.PI * 2
+            };
+            balls.push(ball);
+
+            // Volver a la imagen GE1 después de 0.9 segundos
+            setTimeout(() => {
+                square.showGE2 = false;
+            }, 500);
+
+            if (squaresFired === squares.length) {
+                setTimeout(() => {
+                    nextLevel();
+                }, 4000);
+            }
+            break;
+        }
+    }
+}
+
+function update() {
+    if (isGameOver) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-
-    squares.forEach(square => square.draw());
-    balls.forEach(ball => {
-        ball.update();
-        ball.draw();
-    });
-
-    player.draw();
-
+    drawSquares();
+    drawPlayer();
+    drawBalls();
+    moveBalls();
     checkCollisions();
 
-    if (allSquaresActivated && balls.length === 0) {
-        nextLevel();
-    }
+    activateSquare();
 
-    animationFrameId = requestAnimationFrame(gameLoop);
+    requestAnimationFrame(update);
 }
 
-function saveScore() {
-    const playerName = document.getElementById('playerName').value;
+canvas.addEventListener('mousemove', (e) => {
+    if (isGameOver) return;
+    const rect = canvas.getBoundingClientRect();
+    player.x = e.clientX - rect.left;
+    player.y = e.clientY - rect.top;
+});
+
+startButton.addEventListener('click', () => {
+    rulesDiv.classList.add('hidden');
+    init();
+    update();
+});
+
+saveScoreButton.addEventListener('click', () => {
+    const playerName = playerNameInput.value.trim();
     if (playerName) {
-        let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
-        highScores.push({ name: playerName, score: score });
-        highScores.sort((a, b) => b.score - a.score);
-        localStorage.setItem('highScores', JSON.stringify(highScores));
-        displayHighScores();
+        saveScore(playerName, score);
+        gameOverDiv.classList.add('hidden');
+        showHighScores();
     }
+});
+
+playAgainButton.addEventListener('click', () => {
+    highScoresDiv.classList.add('hidden');
+    init();
+    update();
+});
+
+function saveScore(name, score) {
+    const scores = JSON.parse(localStorage.getItem('scores')) || [];
+    scores.push({ name, score });
+    scores.sort((a, b) => b.score - a.score);
+    localStorage.setItem('scores', JSON.stringify(scores));
 }
 
-function displayHighScores() {
-    const highScores = JSON.parse(localStorage.getItem('highScores')) || [];
-    const highScoresList = document.getElementById('highScores');
-    highScoresList.innerHTML = '<h3>Mejores Puntuaciones</h3>';
-    highScores.forEach((entry, index) => {
-        highScoresList.innerHTML += `<p>${index + 1}. ${entry.name}: ${entry.score}</p>`;
+function showHighScores() {
+    const scores = JSON.parse(localStorage.getItem('scores')) || [];
+    scoreList.innerHTML = '';
+    scores.forEach((score, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${index + 1}. ${score.name}: ${score.score}`;
+        scoreList.appendChild(li);
     });
+    highScoresDiv.classList.remove('hidden');
 }
 
-window.onload = () => {
-    displayHighScores();
-};
+init();
